@@ -116,9 +116,8 @@ def _make_market_row(
     return {"id": market["id"], "q": forecast}
 
 
-def make_output(case: Any) -> dict:
-    """Build one result while preserving complete market coverage."""
-    _name, horizon, markets = validate_case(case)
+def _build_output(markets: list[dict], horizon: int) -> dict:
+    """Forecast validated inputs without repeating their history scan."""
     histories = [market["prices"] for market in markets]
     forecasts = [
         _make_market_row(market, horizon, histories)
@@ -127,6 +126,12 @@ def make_output(case: Any) -> dict:
     result = {"forecasts": forecasts}
     validate_output(result, markets, horizon)
     return result
+
+
+def make_output(case: Any) -> dict:
+    """Build one result while preserving complete market coverage."""
+    _name, horizon, markets = validate_case(case)
+    return _build_output(markets, horizon)
 
 
 def validate_output(result: Any, markets: list[dict], horizon: int) -> None:
@@ -215,7 +220,7 @@ def run_cases(input_dir: Path, output_dir: Path) -> None:
     for source in sources:
         case = _read_case(source)
         case_name, horizon, markets = validate_case(case)
-        result = make_output(case)
+        result = _build_output(markets, horizon)
         validate_output(result, markets, horizon)
         encoded = _serialize(result, case_name)
         _write_result(output_dir, case_name, encoded)
